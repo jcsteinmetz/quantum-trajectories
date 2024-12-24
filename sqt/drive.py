@@ -74,13 +74,12 @@ class Measurement:
         # Current value of measured coord
         current_coord = np.real(np.trace(pauli_n(self.measurement_axis) @ density_matrix))
 
-        # Draw from either P+ or P- using weights from the density matrix
-        gaussian_mean = np.random.choice([1, -1], p=[(1+current_coord)/2, (1-current_coord)/2])
-
         if not stochastic:
-            return np.random.normal(gaussian_mean, 0)
+            return current_coord
         else:
-            return np.random.normal(gaussian_mean, np.sqrt(self.tau/dt))
+             # Draw from either P+ or P- using weights from the density matrix
+            gaussian_mean = np.random.choice([1, -1], p=[(1+current_coord)/2, (1-current_coord)/2])
+            return np.random.normal(gaussian_mean, np.sqrt(self.tau/(dt*self.efficiency)))
 
 
 # return np.cos(self.shape(t)*dt/2)*np.eye(2) - 1j*np.sin(self.shape(t)*dt/2)*pauli_n(self.rotation_axis)

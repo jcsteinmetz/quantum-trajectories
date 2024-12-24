@@ -101,7 +101,7 @@ class Qubit:
                              np.real(np.trace(pauli_y @ self.density_matrix)),
                              np.real(np.trace(pauli_z @ self.density_matrix))]
 
-        if 0 <= np.linalg.norm(self.bloch_vector) <= 1:
+        if not 0 <= np.linalg.norm(self.bloch_vector) <= 1:
             self.normalize()
 
 
