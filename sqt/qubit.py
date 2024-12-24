@@ -1,7 +1,7 @@
 import numpy as np
 from typing import List, Union, Tuple
-from drive import Rabi, Measurement
-from utils import pauli_x, pauli_y, pauli_z
+from sqt.drive import Rabi, Measurement
+from sqt.utils import pauli_x, pauli_y, pauli_z
 
 class Qubit:
     def __init__(self, bloch_vector: List[float]):

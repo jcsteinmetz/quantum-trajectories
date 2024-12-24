@@ -1,6 +1,6 @@
 import numpy as np
 from typing import List
-from utils import pauli_n
+from sqt.utils import pauli_n
 
 class Rabi:
     """

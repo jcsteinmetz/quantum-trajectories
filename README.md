@@ -1,1 +1,1 @@
-# quantum-trajectories
+# Stochastic quantum trajectories in cavity QED
