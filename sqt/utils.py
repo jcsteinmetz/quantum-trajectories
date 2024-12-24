@@ -13,10 +13,8 @@ pauli_z[0,0] = 1.0
 pauli_z[1,1] = -1.0
 
 def pauli_n(axis):
+    """
+    Pauli matrix along an arbitrary axis
+    """
     axis = axis / np.linalg.norm(axis)
-    pauli = np.zeros((2,2),dtype=complex)
-    pauli[0,0] = axis[2]
-    pauli[0,1] = axis[0]-1j*axis[1]
-    pauli[1,0] = axis[0]+1j*axis[1]
-    pauli[1,1] = -axis[2]
-    return pauli
+    return axis[0] * pauli_x + axis[1] * pauli_y + axis[2] * pauli_z
