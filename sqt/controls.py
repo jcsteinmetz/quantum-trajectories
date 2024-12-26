@@ -1,26 +1,42 @@
 """
-Contains various types of drive that can be applied to the qubit.
+Contains various types of controls that can be applied to the qubit.
 """
 from typing import List
+from abc import ABC, abstractmethod
 import numpy as np
 from sqt.utils import pauli_n
 
-class Rabi:
+class Control(ABC):
+    """
+    Abstract class for qubit controls
+    """
+    def __init__(self, direction):
+        self.direction = direction
+
+    @abstractmethod
+    def operator(self, *args, **kwargs):
+        """
+        Matrix operator to apply the current control to the density matrix.
+        """
+
+class Rabi(Control):
     """
     Rabi drive, which rotates the qubit about a given axis.
     """
     def __init__(self,
-                 rotation_axis: List[float],
-                 rotation_angle: float,
+                 direction: List[float],
+                 angle: float,
                  time_start: float,
                  time_end: float):
+
+        super().__init__(direction)
 
         if time_start >= time_end:
             raise ValueError("Invalid start/end times.")
 
-        self.rotation_axis = rotation_axis / np.linalg.norm(rotation_axis)
+        self.direction = direction / np.linalg.norm(direction)
 
-        self.rotation_angle = rotation_angle
+        self.angle = angle
         self.time_start = time_start
         self.time_end = time_end
         self.width = time_end - time_start
@@ -30,26 +46,28 @@ class Rabi:
         Sine squared pulse shape between time_start and time_end.
         """
         cutoff = (time >= self.time_start) & (time <= self.time_end)
-        amplitude = self.rotation_angle * 2 / self.width
+        amplitude = self.angle * 2 / self.width
         return cutoff * amplitude * np.sin((np.pi/self.width)*(time-np.pi/2))**2
 
     def operator(self, t: float, dt: float) -> np.ndarray:
         """
         Matrix operator to apply the drive to a density matrix.
         """
-        return np.eye(2) - 1j*(self.shape(t)*dt/2) * pauli_n(self.rotation_axis)
+        return np.eye(2) - dt * pauli_n(self.direction) * 1j * (self.shape(t)/2)
 
-class Measurement:
+class Measurement(Control):
     """
-    Measurement drive, which acts slowly compared to all other qubit evolution. Causes
+    Dispersive measurement, which acts slowly compared to all other qubit evolution. Causes
     backaction, which kicks the qubit towards one of its eigenstates.
     """
     def __init__(self,
-                 measurement_axis: List[float],
+                 direction: List[float],
                  tau: float,
                  efficiency: float = 1):
 
-        self.measurement_axis = measurement_axis
+        super().__init__(direction)
+
+        self.direction = direction
         self.tau = tau
         self.efficiency = efficiency
 
@@ -61,7 +79,7 @@ class Measurement:
         Matrix operator to apply the measurement backaction to the density matrix.
         """
         readout = self.readout(density_matrix, dt, stochastic)
-        return np.eye(2) + (readout * dt / (2 * self.tau)) * pauli_n(self.measurement_axis)
+        return np.eye(2) + dt * pauli_n(self.direction) * (readout / (2 * self.tau))
 
     def readout(self,
                 density_matrix: np.ndarray,
@@ -72,7 +90,7 @@ class Measurement:
         """
 
         # Current value of measured coord
-        current_coord = np.real(np.trace(pauli_n(self.measurement_axis) @ density_matrix))
+        current_coord = np.real(np.trace(pauli_n(self.direction) @ density_matrix))
 
         if not stochastic:
             return current_coord
@@ -82,6 +100,6 @@ class Measurement:
             return np.random.normal(gaussian_mean, np.sqrt(self.tau/(dt*self.efficiency)))
 
 
-# return np.cos(self.shape(t)*dt/2)*np.eye(2) - 1j*np.sin(self.shape(t)*dt/2)*pauli_n(self.rotation_axis)
+# return np.cos(self.shape(t)*dt/2)*np.eye(2) - 1j*np.sin(self.shape(t)*dt/2)*pauli_n(self.direction)
 # a = readout * np.sqrt(eta) * dt / (2.0 * self.tau)
 # return np.cosh(a)*I+np.sinh(a)*sig_n

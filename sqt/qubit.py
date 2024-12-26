@@ -4,13 +4,19 @@ Contains the Qubit class.
 
 from typing import List, Union, Tuple
 from copy import copy
+import math
+import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 import numpy as np
-from sqt.drive import Rabi, Measurement
+import seaborn as sns
+from sqt.controls import Rabi, Measurement
 from sqt.utils import pauli_x, pauli_y, pauli_z
+
+sns.set_theme()
 
 class Qubit:
     """
-    A single qubit in a cavity.
+    A single qubit in a resonant cavity.
     """
     def __init__(self, initial_bloch_vector: List[float]):
         if len(initial_bloch_vector) != 3:
@@ -42,9 +48,9 @@ class Qubit:
                                    + pauli_y*self.current_bloch_vector[1]
                                    + pauli_z*self.current_bloch_vector[2])
 
-    def set_drives(self, drives: List[Union[Rabi, Measurement]]) -> None:
+    def set_controls(self, drives: List[Union[Rabi, Measurement]]) -> None:
         """
-        Applies a list of Rabi drives and measurement drives to the qubit.
+        Applies a list of controls to the qubit.
         """
         # Apply all measurement drives before all Rabi drives
         self.drives = sorted(drives, key=lambda drive: isinstance(drive, Rabi))
@@ -115,6 +121,44 @@ class Qubit:
                                    + pauli_y*self.current_bloch_vector[1]
                                    + pauli_z*self.current_bloch_vector[2])
 
+    def plot_trajectories(self,
+                          n_trajectories: int,
+                          time_start: float,
+                          time_end: float,
+                          dt: float,
+                          stochastic: bool = True) -> Figure:
+
+        n_meas = int((time_end - time_start)/dt)
+        time = np.arange(time_start, time_end, dt)
+
+        fig, axes = plt.subplots(3, 1, figsize=(8, 12))
+
+        # Stochastic trajectories
+        if stochastic:
+            for traj in range(n_trajectories):
+                _, trajectory_data = self.trajectory(time_start, time_end, dt, stochastic)
+
+                axes[0].plot(time, trajectory_data[0])
+                axes[1].plot(time, trajectory_data[1])
+                axes[2].plot(time, trajectory_data[2])
+
+        # Ensemble average
+        _, ens_avg_data = self.trajectory(time_start, time_end, dt, False)
+        axes[0].plot(time, ens_avg_data[0], 'k--')
+        axes[1].plot(time, ens_avg_data[1], 'k--')
+        axes[2].plot(time, ens_avg_data[2], 'k--')
+
+        # Plot format
+        axes[0].set_title("x")
+        axes[1].set_title("y")
+        axes[2].set_title("z")
+
+        axes[0].set_ylim([-1.1, 1.1])
+        axes[1].set_ylim([-1.1, 1.1])
+        axes[2].set_ylim([-1.1, 1.1])
+
+        return fig
+
 
     # U = U - dt*0.5*((G1/4)*np.dot((pauli_x+1j*pauli_y),(pauli_x-1j*pauli_y))+(Gphi/2)*np.dot(pauli_z,pauli_z))#+dt*np.sqrt(eta)*(pauli_x*rx/(4*tau_x)+pauli_z*rz/(4*tau_z))
 
@@ -124,7 +168,7 @@ class Qubit:
 
     # relaxation and dephasing
     # numerator += dt*((G1/4)*np.dot((pauli_x-1j*pauli_y),np.dot(density_matrix,(pauli_x+1j*pauli_y)))+(Gphi/2)*np.dot(pauli_z,np.dot(density_matrix,pauli_z)))
-    
+
     # numerator[0,0] = (1-G1*dt)*numerator[0,0]
     # numerator[0,1] = (1-Gphi*dt-G1*dt/2.0)*numerator[0,1]
     # numerator[1,0] = (1-Gphi*dt-G1*dt/2.0)*numerator[1,0]
