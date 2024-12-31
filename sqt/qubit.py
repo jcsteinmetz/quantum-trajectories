@@ -9,8 +9,9 @@ import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 import numpy as np
 import seaborn as sns
-from sqt.controls import Rabi, Measurement
-from sqt.utils import pauli_x, pauli_y, pauli_z
+from sqt.controls import RabiDrive
+from sqt.measurements import WeakMeasurement
+from sqt.utils import pauli_x, pauli_y, pauli_z, pauli_n
 
 sns.set_theme()
 
@@ -29,7 +30,8 @@ class Qubit:
                                    + pauli_y*self.current_bloch_vector[1]
                                    + pauli_z*self.current_bloch_vector[2])
 
-        self.drives = []
+        self.controls = []
+        self.measurements = []
 
     def __repr__(self) -> str:
         return f"Qubit(bloch_vector={self.initial_bloch_vector})"
@@ -48,12 +50,17 @@ class Qubit:
                                    + pauli_y*self.current_bloch_vector[1]
                                    + pauli_z*self.current_bloch_vector[2])
 
-    def set_controls(self, drives: List[Union[Rabi, Measurement]]) -> None:
+    def set_controls(self, controls: List[RabiDrive]) -> None:
         """
-        Applies a list of controls to the qubit.
+        Applies a list of control drives to the qubit.
         """
-        # Apply all measurement drives before all Rabi drives
-        self.drives = sorted(drives, key=lambda drive: isinstance(drive, Rabi))
+        self.controls = controls
+
+    def set_measurements(self, measurements: List[WeakMeasurement]) -> None:
+        """
+        Applies a list of continuous measurements to the qubit.
+        """
+        self.measurements = measurements
 
     def trajectory(self,
                    time_start: float,
@@ -92,19 +99,19 @@ class Qubit:
         """
         Evolves the qubit forward by one time step using a Bayesian update.
         """
-        evolution_operator = np.eye(2)
+        total_operator = np.eye(2)
 
         # measurement
-        for drive in self.drives:
-            if isinstance(drive, Measurement):
-                drive_operator = drive.operator(self.current_density_matrix, dt, stochastic)
-            else:
-                drive_operator = drive.operator(current_time, dt)
+        for measurement in self.measurements:
+            measurement_operator = measurement.operator(self.current_density_matrix, dt, stochastic)
+            total_operator = measurement_operator @ total_operator
 
-            evolution_operator = drive_operator @ evolution_operator
+        for control in self.controls:
+            control_operator = control.operator(current_time, dt)
+            total_operator = control_operator @ total_operator
 
-        evolution_operator_dagger = evolution_operator.conj().T
-        numerator = evolution_operator @ self.current_density_matrix @ evolution_operator_dagger
+        total_operator_dagger = total_operator.conj().T
+        numerator = total_operator @ self.current_density_matrix @ total_operator_dagger
 
         self.current_density_matrix = numerator/np.trace(numerator)
         self.current_bloch_vector = [np.real(np.trace(pauli_x @ self.current_density_matrix)),
@@ -163,8 +170,8 @@ class Qubit:
     # U = U - dt*0.5*((G1/4)*np.dot((pauli_x+1j*pauli_y),(pauli_x-1j*pauli_y))+(Gphi/2)*np.dot(pauli_z,pauli_z))#+dt*np.sqrt(eta)*(pauli_x*rx/(4*tau_x)+pauli_z*rz/(4*tau_z))
 
     # measurement inefficiency
-    # numerator += (1-eta)*(dt/(4*drive.tau))*np.dot(pauli_z,np.dot(density_matrix,pauli_z))
-    # numerator += (1-eta)*(dt/(4*drive.tau))*np.dot(pauli_x,np.dot(density_matrix,pauli_x))
+    # numerator += (1-eta)*(dt/(4*control.tau))*np.dot(pauli_z,np.dot(density_matrix,pauli_z))
+    # numerator += (1-eta)*(dt/(4*control.tau))*np.dot(pauli_x,np.dot(density_matrix,pauli_x))
 
     # relaxation and dephasing
     # numerator += dt*((G1/4)*np.dot((pauli_x-1j*pauli_y),np.dot(density_matrix,(pauli_x+1j*pauli_y)))+(Gphi/2)*np.dot(pauli_z,np.dot(density_matrix,pauli_z)))
@@ -173,5 +180,3 @@ class Qubit:
     # numerator[0,1] = (1-Gphi*dt-G1*dt/2.0)*numerator[0,1]
     # numerator[1,0] = (1-Gphi*dt-G1*dt/2.0)*numerator[1,0]
     # numerator[1,1] = numerator[1,1]+G1*dt*numerator[0,0]
-
-    # return normal(gaussian_mean*np.sqrt(eta),np.sqrt(tau/dt))
