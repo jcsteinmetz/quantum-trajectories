@@ -156,9 +156,13 @@ class Qubit:
         axes[2].plot(time, ens_avg_data[2], 'k--')
 
         # Plot format
-        axes[0].set_title("x")
-        axes[1].set_title("y")
-        axes[2].set_title("z")
+        axes[0].set_xlabel("Time (arb. units)")
+        axes[1].set_xlabel("Time (arb. units)")
+        axes[2].set_xlabel("Time (arb. units)")
+        
+        axes[0].set_ylabel("x")
+        axes[1].set_ylabel("y")
+        axes[2].set_ylabel("z")
 
         axes[0].set_ylim([-1.1, 1.1])
         axes[1].set_ylim([-1.1, 1.1])
