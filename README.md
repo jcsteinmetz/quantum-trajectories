@@ -32,7 +32,7 @@ A stochastic quantum trajectory is obtained by repeating this process many times
 
 This simualtor can be used to generate stochastic trajectories for a qubit undergoing an additional drive.
 
-First, create a qubit in a state given by a Bloch vector $(x,y,z)$, then create the measurements and controls to be applied. Right now there is one of each implemented: `WeakMeasurement` and `RabiDrive`. A weak measurement can be applied with any strength `tau`, any measurement efficiency `eta`, any measurement direction (unlike in the description above, where I focused on a $z$ measurement). Here's an example where a qubit initially in a $y$ eigenstate is subjected to a weak measurement of its $z$ coordinate while we also apply a Rabi drive that rotates the qubit around the $x$ axis.
+First, create a qubit in a state given by a Bloch vector $(x,y,z)$, then create the measurements and controls to be applied. Right now there is one of each implemented: `WeakMeasurement` and `RabiDrive`. A weak measurement can be applied with any strength `tau`, any measurement efficiency `eta`, any measurement direction (unlike in the description above, where I focused on a $z$ measurement). The Rabi drive is applied with an angle of pi, meaning if it were applied alone, it would rotate the state from $+Y$ to $-Y$. Here's an example where a qubit initially in a $y$ eigenstate is subjected to a weak measurement of its $z$ coordinate while we also apply a Rabi drive that rotates the qubit around the $x$ axis.
 
 ```
 qubit = Qubit([0,1,0])
@@ -41,8 +41,8 @@ rabi_x = RabiDrive(direction = [1,0,0], angle = np.pi, time_start = 0, time_end 
 
 qubit.set_measurements([weak_z])
 qubit.set_controls([rabi_x])
-fig = qubit.plot_trajectories(n_trajectories = 10, time_start = 0, time_end = 1000, dt = 1, stochastic = True)
+fig = qubit.plot_trajectories(n_trajectories = 10, time_start = 0, time_end = 1000, dt = 1)
 ```
 
-This results in the following plots, which also show the theoretical ensemble average:
+This results in the following plots:
 ![](assets/sine_squared.png)
