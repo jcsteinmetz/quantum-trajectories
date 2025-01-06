@@ -21,18 +21,16 @@ class WeakMeasurement:
 
     def operator(self,
                  density_matrix: np.ndarray,
-                 dt: float,
-                 stochastic: bool = True) -> np.ndarray:
+                 dt: float) -> np.ndarray:
         """
         Matrix operator to apply the measurement backaction to the density matrix.
         """
-        readout = self.readout(density_matrix, dt, stochastic)
+        readout = self.readout(density_matrix, dt)
         return np.eye(2) + dt * pauli_n(self.direction) * (readout / (2 * self.tau))
 
     def readout(self,
                 density_matrix: np.ndarray,
-                dt: float,
-                stochastic: bool = True) -> float:
+                dt: float) -> float:
         """
         Draws a single trajectory readout from overlapping Gaussian distributions.
         """
@@ -40,9 +38,6 @@ class WeakMeasurement:
         # Current value of measured coord
         current_coord = np.real(np.trace(pauli_n(self.direction) @ density_matrix))
 
-        if not stochastic:
-            return current_coord
-        else:
-             # Draw from either P+ or P- using weights from the density matrix
-            gaussian_mean = np.random.choice([1, -1], p=[(1+current_coord)/2, (1-current_coord)/2])
-            return np.random.normal(gaussian_mean, np.sqrt(self.tau/(dt*self.efficiency)))
+        # Draw from either P+ or P- using weights from the density matrix
+        gaussian_mean = np.random.choice([1, -1], p=[(1+current_coord)/2, (1-current_coord)/2])
+        return np.random.normal(gaussian_mean, np.sqrt(self.tau/(dt*self.efficiency)))

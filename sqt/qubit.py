@@ -65,8 +65,7 @@ class Qubit:
     def trajectory(self,
                    time_start: float,
                    time_end: float,
-                   dt: float,
-                   stochastic: bool = True) -> Tuple[np.ndarray, np.ndarray]:
+                   dt: float) -> Tuple[np.ndarray, np.ndarray]:
         """
         Generates a stochastic quantum trajectory.
         """
@@ -85,7 +84,7 @@ class Qubit:
         trajectory_data[:,0] = self.current_bloch_vector
 
         for step, t in enumerate(time[:-1]): # compute the actual trajectories
-            self.evolve(t, dt, stochastic) # updates current_density_matrix and current_bloch_vector
+            self.evolve(t, dt) # updates current_density_matrix and current_bloch_vector
             trajectory_data[:, step+1] = self.current_bloch_vector
 
         self.reset()
@@ -94,8 +93,7 @@ class Qubit:
 
     def evolve(self,
                current_time: float,
-               dt: float,
-               stochastic: bool = True) -> None:
+               dt: float) -> None:
         """
         Evolves the qubit forward by one time step using a Bayesian update.
         """
@@ -103,7 +101,7 @@ class Qubit:
 
         # measurement
         for measurement in self.measurements:
-            measurement_operator = measurement.operator(self.current_density_matrix, dt, stochastic)
+            measurement_operator = measurement.operator(self.current_density_matrix, dt)
             total_operator = measurement_operator @ total_operator
 
         for control in self.controls:
@@ -132,8 +130,7 @@ class Qubit:
                           n_trajectories: int,
                           time_start: float,
                           time_end: float,
-                          dt: float,
-                          stochastic: bool = True) -> Figure:
+                          dt: float) -> Figure:
 
         n_meas = int((time_end - time_start)/dt)
         time = np.arange(time_start, time_end, dt)
@@ -141,25 +138,18 @@ class Qubit:
         fig, axes = plt.subplots(3, 1, figsize=(8, 12))
 
         # Stochastic trajectories
-        if stochastic:
-            for traj in range(n_trajectories):
-                _, trajectory_data = self.trajectory(time_start, time_end, dt, stochastic)
+        for traj in range(n_trajectories):
+            _, trajectory_data = self.trajectory(time_start, time_end, dt)
 
-                axes[0].plot(time, trajectory_data[0])
-                axes[1].plot(time, trajectory_data[1])
-                axes[2].plot(time, trajectory_data[2])
-
-        # Ensemble average
-        _, ens_avg_data = self.trajectory(time_start, time_end, dt, False)
-        axes[0].plot(time, ens_avg_data[0], 'k--')
-        axes[1].plot(time, ens_avg_data[1], 'k--')
-        axes[2].plot(time, ens_avg_data[2], 'k--')
+            axes[0].plot(time, trajectory_data[0])
+            axes[1].plot(time, trajectory_data[1])
+            axes[2].plot(time, trajectory_data[2])
 
         # Plot format
         axes[0].set_xlabel("Time (arb. units)")
         axes[1].set_xlabel("Time (arb. units)")
         axes[2].set_xlabel("Time (arb. units)")
-        
+
         axes[0].set_ylabel("x")
         axes[1].set_ylabel("y")
         axes[2].set_ylabel("z")
@@ -169,18 +159,3 @@ class Qubit:
         axes[2].set_ylim([-1.1, 1.1])
 
         return fig
-
-
-    # U = U - dt*0.5*((G1/4)*np.dot((pauli_x+1j*pauli_y),(pauli_x-1j*pauli_y))+(Gphi/2)*np.dot(pauli_z,pauli_z))#+dt*np.sqrt(eta)*(pauli_x*rx/(4*tau_x)+pauli_z*rz/(4*tau_z))
-
-    # measurement inefficiency
-    # numerator += (1-eta)*(dt/(4*control.tau))*np.dot(pauli_z,np.dot(density_matrix,pauli_z))
-    # numerator += (1-eta)*(dt/(4*control.tau))*np.dot(pauli_x,np.dot(density_matrix,pauli_x))
-
-    # relaxation and dephasing
-    # numerator += dt*((G1/4)*np.dot((pauli_x-1j*pauli_y),np.dot(density_matrix,(pauli_x+1j*pauli_y)))+(Gphi/2)*np.dot(pauli_z,np.dot(density_matrix,pauli_z)))
-
-    # numerator[0,0] = (1-G1*dt)*numerator[0,0]
-    # numerator[0,1] = (1-Gphi*dt-G1*dt/2.0)*numerator[0,1]
-    # numerator[1,0] = (1-Gphi*dt-G1*dt/2.0)*numerator[1,0]
-    # numerator[1,1] = numerator[1,1]+G1*dt*numerator[0,0]
