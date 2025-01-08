@@ -1,6 +1,6 @@
-# Stochastic quantum trajectories in cavity QED
+# Stochastic quantum trajectories in cQED
 
-This repository contains methods for simulation stochastic quantum trajectories for a qubit in a cavity undergoing dispersive measurement.
+This repository contains methods for simulation stochastic quantum trajectories for a qubit coupled to a resonator undergoing dispersive measurement.
 
 ## Weak measurement
 
